@@ -34,7 +34,7 @@ st.write(
 
 try:
 
-    model = joblib.load("models/watch_model.pkl")
+    model = joblib.load("watch_model.pkl")
 
 except Exception as e:
 

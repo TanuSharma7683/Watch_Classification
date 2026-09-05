@@ -1,4 +1,4 @@
-```python
+
 import streamlit as st
 import cv2
 import numpy as np
@@ -151,39 +151,3 @@ st.markdown("---")
 st.caption(
     "Watch Classification System | Python + Machine Learning + Streamlit"
 )
-```
-
-### ⚠️ One important thing
-
-There is one thing we need to verify: **your trained model's expected image size/features**.
-
-The code above assumes your model was trained using:
-
-```text
-128 × 128 image
-```
-
-and flattened into features.
-
-Since your **`main.py` already works locally**, the safest approach is actually to use the **same image-processing code from your working `main.py`** in `app.py`. Otherwise, the model may load successfully but give a feature-shape error.
-
-### Now do this
-
-1. Replace your entire `app.py` with the code above.
-2. Save it.
-3. Test locally:
-
-```text
-streamlit run app.py
-```
-
-4. If it works locally, commit `app.py` to GitHub.
-5. Let Streamlit redeploy.
-
-If you get an error such as:
-
-```text
-X has 49152 features, but ...
-```
-
-**don't worry**—send me that error. It means we need to match the preprocessing used by your trained model.

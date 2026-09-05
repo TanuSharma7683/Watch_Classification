@@ -1,4 +1,4 @@
-```python
+
 import streamlit as st
 import cv2
 import numpy as np
@@ -213,4 +213,4 @@ st.caption(
     "Watch Detection System | "
     "Python + Machine Learning + Streamlit"
 )
-```
+

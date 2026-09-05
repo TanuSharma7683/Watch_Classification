@@ -34,7 +34,17 @@ st.write(
 # -----------------------------
 
 try:
-    model = joblib.load("models/watch_model.pkl")
+    import os
+import joblib
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "watch_model.pkl")
+
+if not os.path.exists(MODEL_PATH):
+    st.error(f"Trained model not found at: {MODEL_PATH}")
+    st.stop()
+
+model = joblib.load(MODEL_PATH)
 except:
     st.error(
         "Trained model not found. "

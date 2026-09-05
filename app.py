@@ -1,4 +1,4 @@
-
+```python
 import streamlit as st
 import cv2
 import numpy as np
@@ -23,37 +23,36 @@ st.set_page_config(
 # --------------------------------------------------
 
 st.title("⌚ Watch Detection System")
-st.write("Upload a watch image to classify it.")
+st.write("Upload a watch image to classify it using the trained ML model.")
 
 
 # --------------------------------------------------
-# FIND TRAINED MODEL
+# MODEL PATH
 # --------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_PATH = os.path.join(
     BASE_DIR,
-    "models",
     "watch_model.pkl"
 )
 
 
 # --------------------------------------------------
-# CHECK MODEL FILE
+# CHECK MODEL
 # --------------------------------------------------
 
 if not os.path.isfile(MODEL_PATH):
 
     st.error("❌ Trained model not found!")
 
-    st.write("The application is looking for:")
+    st.write("Expected model location:")
 
     st.code(MODEL_PATH)
 
-    st.write("Please make sure the file is located at:")
+    st.write("Your GitHub repository should contain:")
 
-    st.code("models/watch_model.pkl")
+    st.code("watch_model.pkl")
 
     st.stop()
 
@@ -66,20 +65,19 @@ try:
 
     model = joblib.load(MODEL_PATH)
 
+    st.success("✅ Trained model loaded successfully!")
+
 except Exception as e:
 
-    st.error("❌ Error while loading the trained model.")
+    st.error("❌ Error loading the trained model.")
 
     st.code(str(e))
 
     st.stop()
 
 
-st.success("✅ Trained model loaded successfully!")
-
-
 # --------------------------------------------------
-# IMAGE UPLOAD
+# UPLOAD IMAGE
 # --------------------------------------------------
 
 uploaded_file = st.file_uploader(
@@ -94,9 +92,11 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
 
+    # Open image
     image = Image.open(uploaded_file)
 
-    st.subheader("Uploaded Image")
+    # Display image
+    st.subheader("Uploaded Watch Image")
 
     st.image(
         image,
@@ -105,23 +105,30 @@ if uploaded_file is not None:
 
 
     # Convert image to NumPy array
-
     image_array = np.array(image)
 
 
-    # Handle RGBA images
+    # Handle grayscale image
+    if len(image_array.shape) == 2:
 
-    if len(image_array.shape) == 3:
-
-        if image_array.shape[2] == 4:
-
-            image_array = cv2.cvtColor(
-                image_array,
-                cv2.COLOR_RGBA2RGB
-            )
+        image_array = cv2.cvtColor(
+            image_array,
+            cv2.COLOR_GRAY2RGB
+        )
 
 
-    # Resize image
+    # Handle RGBA image
+    elif image_array.shape[2] == 4:
+
+        image_array = cv2.cvtColor(
+            image_array,
+            cv2.COLOR_RGBA2RGB
+        )
+
+
+    # --------------------------------------------------
+    # RESIZE IMAGE
+    # --------------------------------------------------
 
     image_resized = cv2.resize(
         image_array,
@@ -129,21 +136,27 @@ if uploaded_file is not None:
     )
 
 
-    # Normalize pixel values
+    # --------------------------------------------------
+    # NORMALIZE IMAGE
+    # --------------------------------------------------
 
     image_normalized = (
         image_resized.astype("float32") / 255.0
     )
 
 
-    # Flatten image
+    # --------------------------------------------------
+    # FLATTEN IMAGE
+    # --------------------------------------------------
 
     image_flattened = (
         image_normalized.flatten()
     )
 
 
-    # Create model input
+    # --------------------------------------------------
+    # PREPARE MODEL INPUT
+    # --------------------------------------------------
 
     image_input = image_flattened.reshape(
         1,
@@ -152,13 +165,14 @@ if uploaded_file is not None:
 
 
     # --------------------------------------------------
-    # CLASSIFICATION
+    # CLASSIFY BUTTON
     # --------------------------------------------------
 
     if st.button("🔍 Classify Watch"):
 
         try:
 
+            # Make prediction
             prediction = model.predict(
                 image_input
             )
@@ -166,6 +180,7 @@ if uploaded_file is not None:
             result = prediction[0]
 
 
+            # Display result
             st.subheader("Classification Result")
 
             st.success(
@@ -188,7 +203,7 @@ if uploaded_file is not None:
                 )
 
                 st.write(
-                    f"Confidence: {confidence:.2f}%"
+                    f"**Confidence: {confidence:.2f}%**"
                 )
 
                 st.progress(
@@ -213,4 +228,4 @@ st.caption(
     "Watch Detection System | "
     "Python + Machine Learning + Streamlit"
 )
-
+```

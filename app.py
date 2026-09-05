@@ -1,9 +1,7 @@
-
 import streamlit as st
 import cv2
 import numpy as np
 import joblib
-import os
 from PIL import Image
 
 
@@ -12,7 +10,7 @@ from PIL import Image
 # --------------------------------------------------
 
 st.set_page_config(
-    page_title="Watch Detection System",
+    page_title="Watch Classification",
     page_icon="⌚",
     layout="centered"
 )
@@ -22,72 +20,34 @@ st.set_page_config(
 # TITLE
 # --------------------------------------------------
 
-st.title("⌚ Watch Detection System")
-st.write("Upload a watch image to classify it using the trained ML model.")
+st.title("⌚ Watch Classification Using Machine Learning")
+st.write("Upload an image to classify whether it is With Watch or Without Watch.")
 
 
 # --------------------------------------------------
-# MODEL PATH
-# --------------------------------------------------
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-MODEL_PATH = os.path.join(
-    BASE_DIR,
-    "watch_model.pkl"
-)
-
-
-# --------------------------------------------------
-# CHECK MODEL
-# --------------------------------------------------
-
-if not os.path.isfile(MODEL_PATH):
-
-    st.error("❌ Trained model not found!")
-
-    st.write("Expected model location:")
-
-    st.code(MODEL_PATH)
-
-    st.write("Your GitHub repository should contain:")
-
-    st.code("watch_model.pkl")
-
-    st.stop()
-
-
-# --------------------------------------------------
-# LOAD MODEL
+# LOAD TRAINED MODEL
 # --------------------------------------------------
 
 try:
-
-    model = joblib.load(MODEL_PATH)
-
-    st.success("✅ Trained model loaded successfully!")
-
+    model = joblib.load("models/watch_model.pkl")
 except Exception as e:
-
-    st.error("❌ Error loading the trained model.")
-
-    st.code(str(e))
-
+    st.error("Model file could not be loaded.")
+    st.write(e)
     st.stop()
 
 
 # --------------------------------------------------
-# UPLOAD IMAGE
+# IMAGE UPLOAD
 # --------------------------------------------------
 
 uploaded_file = st.file_uploader(
-    "📁 Upload Watch Image",
+    "Upload a watch image",
     type=["jpg", "jpeg", "png"]
 )
 
 
 # --------------------------------------------------
-# IMAGE PROCESSING
+# IMAGE PROCESSING AND PREDICTION
 # --------------------------------------------------
 
 if uploaded_file is not None:
@@ -95,136 +55,63 @@ if uploaded_file is not None:
     # Open image
     image = Image.open(uploaded_file)
 
-    # Display image
-    st.subheader("Uploaded Watch Image")
+    # Display uploaded image
+    st.subheader("Uploaded Image")
+    st.image(image, caption="Input Image", width=300)
 
-    st.image(
-        image,
-        use_container_width=True
-    )
-
-
-    # Convert image to NumPy array
+    # Convert PIL image to OpenCV/Numpy format
     image_array = np.array(image)
 
+    # Convert RGB/RGBA image to BGR/Grayscale-compatible format
+    if len(image_array.shape) == 3:
 
-    # Handle grayscale image
-    if len(image_array.shape) == 2:
-
-        image_array = cv2.cvtColor(
-            image_array,
-            cv2.COLOR_GRAY2RGB
-        )
-
-
-    # Handle RGBA image
-    elif image_array.shape[2] == 4:
-
-        image_array = cv2.cvtColor(
-            image_array,
-            cv2.COLOR_RGBA2RGB
-        )
-
-
-    # --------------------------------------------------
-    # RESIZE IMAGE
-    # --------------------------------------------------
-
-    image_resized = cv2.resize(
-    image_array,
-    (64, 64)
-)
-
-
-    # --------------------------------------------------
-    # NORMALIZE IMAGE
-    # --------------------------------------------------
-
-    image_normalized = (
-        image_resized.astype("float32") / 255.0
-    )
-
-
-    # --------------------------------------------------
-    # FLATTEN IMAGE
-    # --------------------------------------------------
-
-    image_flattened = (
-        image_normalized.flatten()
-    )
-
-
-    # --------------------------------------------------
-    # PREPARE MODEL INPUT
-    # --------------------------------------------------
-
-    image_input = image_flattened.reshape(
-        1,
-        -1
-    )
-
-
-    # --------------------------------------------------
-    # CLASSIFY BUTTON
-    # --------------------------------------------------
-
-    if st.button("🔍 Classify Watch"):
-
-        try:
-
-            # Make prediction
-            prediction = model.predict(
-                image_input
+        if image_array.shape[2] == 4:
+            image_array = cv2.cvtColor(
+                image_array,
+                cv2.COLOR_RGBA2BGR
+            )
+        else:
+            image_array = cv2.cvtColor(
+                image_array,
+                cv2.COLOR_RGB2BGR
             )
 
-            result = prediction[0]
+    # Resize image
+    image_array = cv2.resize(image_array, (64, 64))
 
+    # Flatten image into feature vector
+    image_array = image_array.flatten()
+
+    # Convert to NumPy array and reshape
+    image_array = np.array(image_array).reshape(1, -1)
+
+    # Prediction button
+    if st.button("Predict"):
+
+        try:
+            prediction = model.predict(image_array)[0]
+
+            # --------------------------------------------------
+            # CONVERT MODEL LABEL TO ACTUAL CLASS NAME
+            # --------------------------------------------------
+
+            if prediction == 0:
+                result = "With Watch"
+            elif prediction == 1:
+                result = "Without Watch"
+            else:
+                result = str(prediction)
 
             # Display result
             st.subheader("Classification Result")
 
-            st.success(
-                f"⌚ Predicted Class: {result}"
-            )
-
-
-            # --------------------------------------------------
-            # CONFIDENCE
-            # --------------------------------------------------
-
-            if hasattr(model, "predict_proba"):
-
-                probabilities = model.predict_proba(
-                    image_input
-                )
-
-                confidence = (
-                    np.max(probabilities) * 100
-                )
-
-                st.write(
-                    f"**Confidence: {confidence:.2f}%**"
-                )
-
-                st.progress(
-                    min(int(confidence), 100)
-                )
-
+            if prediction == 0:
+                st.success("Prediction: With Watch")
+            elif prediction == 1:
+                st.warning("Prediction: Without Watch")
+            else:
+                st.info(f"Prediction: {result}")
 
         except Exception as e:
-
-            st.error("❌ Prediction failed.")
-
-            st.code(str(e))
-
-
-# --------------------------------------------------
-# FOOTER
-# --------------------------------------------------
-
-st.markdown("---")
-
-st.caption(
-    "Watch Detection System | "
-    "Python + Machine Learning + Streamlit"
-)
+            st.error("Prediction failed.")
+            st.write(e)

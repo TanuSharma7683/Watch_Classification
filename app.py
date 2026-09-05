@@ -1,3 +1,4 @@
+
 import streamlit as st
 import cv2
 import numpy as np
@@ -10,7 +11,7 @@ from PIL import Image
 # --------------------------------------------------
 
 st.set_page_config(
-    page_title="Watch Classification",
+    page_title="Watch Detection",
     page_icon="⌚",
     layout="centered"
 )
@@ -20,8 +21,11 @@ st.set_page_config(
 # TITLE
 # --------------------------------------------------
 
-st.title("⌚ Watch Classification Using Machine Learning")
-st.write("Upload an image to classify whether it is With Watch or Without Watch.")
+st.title("⌚ Watch Detection Using Machine Learning")
+
+st.write(
+    "Upload an image to check whether it contains a watch."
+)
 
 
 # --------------------------------------------------
@@ -29,10 +33,15 @@ st.write("Upload an image to classify whether it is With Watch or Without Watch.
 # --------------------------------------------------
 
 try:
-    model = joblib.load("watch_model.pkl")
+
+    model = joblib.load("models/watch_model.pkl")
+
 except Exception as e:
-    st.error("Model file could not be loaded.")
+
+    st.error("Unable to load the trained model.")
+
     st.write(e)
+
     st.stop()
 
 
@@ -41,7 +50,7 @@ except Exception as e:
 # --------------------------------------------------
 
 uploaded_file = st.file_uploader(
-    "Upload a watch image",
+    "Upload an image",
     type=["jpg", "jpeg", "png"]
 )
 
@@ -55,59 +64,62 @@ if uploaded_file is not None:
     # Open uploaded image
     image = Image.open(uploaded_file)
 
-    # Display image
+    # Display uploaded image
     st.subheader("Uploaded Image")
+
     st.image(
         image,
         caption="Input Image",
         width=300
     )
 
-    # Convert PIL image to NumPy array
-    image_array = np.array(image)
 
-    # Convert image to 3-channel BGR
-    if len(image_array.shape) == 3:
+    # --------------------------------------------------
+    # CONVERT PIL IMAGE TO OPENCV FORMAT
+    # --------------------------------------------------
 
-        # Handle RGBA images
-        if image_array.shape[2] == 4:
-            image_array = cv2.cvtColor(
-                image_array,
+    image = np.array(image)
+
+    # Convert RGB to BGR
+    if len(image.shape) == 3:
+
+        if image.shape[2] == 4:
+
+            image = cv2.cvtColor(
+                image,
                 cv2.COLOR_RGBA2BGR
             )
 
-        # Handle RGB images
         else:
-            image_array = cv2.cvtColor(
-                image_array,
+
+            image = cv2.cvtColor(
+                image,
                 cv2.COLOR_RGB2BGR
             )
 
-    # If grayscale image
-    elif len(image_array.shape) == 2:
-        image_array = cv2.cvtColor(
-            image_array,
-            cv2.COLOR_GRAY2BGR
-        )
 
     # --------------------------------------------------
-    # IMAGE RESIZING
+    # RESIZE IMAGE
     # --------------------------------------------------
 
-    image_array = cv2.resize(
-        image_array,
+    image = cv2.resize(
+        image,
         (64, 64)
     )
 
+
     # --------------------------------------------------
-    # CONVERT IMAGE INTO FEATURES
+    # FLATTEN IMAGE
     # --------------------------------------------------
 
-    image_array = image_array.flatten()
+    image = image.flatten()
 
-    image_array = np.array(
-        image_array
-    ).reshape(1, -1)
+
+    # --------------------------------------------------
+    # CONVERT TO 2D ARRAY
+    # --------------------------------------------------
+
+    image = np.array([image])
 
 
     # --------------------------------------------------
@@ -118,37 +130,33 @@ if uploaded_file is not None:
 
         try:
 
-            prediction = model.predict(
-                image_array
-            )[0]
+            prediction = model.predict(image)
+
+            predicted_class = prediction[0]
+
 
             # --------------------------------------------------
-            # CONVERT NUMERICAL LABEL TO CLASS NAME
+            # LABEL MAPPING
             # --------------------------------------------------
 
-            if prediction == 0:
-
-                result = "With Watch"
+            if predicted_class == 1:
 
                 st.success(
-                    "Prediction: With Watch"
+                    "Prediction: WITH WATCH"
                 )
 
-            elif prediction == 1:
-
-                result = "Without Watch"
+            elif predicted_class == 0:
 
                 st.warning(
-                    "Prediction: Without Watch"
+                    "Prediction: WITHOUT WATCH"
                 )
 
             else:
 
-                result = str(prediction)
-
                 st.info(
-                    f"Prediction: {result}"
+                    f"Prediction: {predicted_class}"
                 )
+
 
         except Exception as e:
 
@@ -157,3 +165,4 @@ if uploaded_file is not None:
             )
 
             st.write(e)
+
